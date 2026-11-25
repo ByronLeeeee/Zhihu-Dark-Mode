@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         可能是更优雅的知乎网页版暗黑模式 - Zhihu Dark Mode
-// @version      0.2.0
+// @version      0.2.4
 // @description  知乎网页版的暗黑模式就写了一半，我帮它尽量写完
 // @author       ByronLeeeee
 // @match        *://*.zhihu.com/*
@@ -13,17 +13,39 @@
 (function () {
     'use strict';
 
-    // 检查用户保存的深色模式偏好
-    const isDark = localStorage.getItem('zhihu-dark-mode') === 'true';
+    const STORAGE_KEY = 'zhihu-dark-mode';
+    const BUTTON_ID = 'zhihu-dark-mode-toggle';
 
-    // 在页面解析之前设置初始主题，避免白屏
-    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+    // 检查用户保存的深色模式偏好
+    let isDark = false;
+    try {
+        isDark = localStorage.getItem(STORAGE_KEY) === 'true';
+    } catch (error) {
+        console.error('[Zhihu Dark Mode] 读取网站储存失败', error);
+    }
 
     // 在页面解析前注入CSS样式
     const style = document.createElement('style');
+    style.media = isDark ? 'all' : 'not all';
+
+    // 设置主题函数
+    const applyTheme = () => {
+        const root = document.documentElement;
+        if (!root) return;
+        // 日间停用夜间样式，修复背景透明问题。
+        const media = isDark ? 'all' : 'not all';
+        if (style.media !== media) style.media = media;
+        const theme = isDark ? 'dark' : 'light';
+        // 避免重复设置主题触发监听循环。
+        if (root.getAttribute('data-theme') !== theme) {
+            root.setAttribute('data-theme', theme);
+        }
+    };
+
     style.textContent = `
+
         /* 全局悬浮效果 */
-        button:hover {
+        html[data-theme="dark"] button:hover {
             opacity: 0.8;
             transform: scale(1.1);
             transition: all 0.2s ease;
@@ -59,237 +81,396 @@
         }
 
         /* --- 按功能/组件应用变量 --- */
-
         /* 顶部导航栏 (banner) */
-        [data-theme="dark"] .AppHeader,
-        [data-theme="dark"] header[role="banner"],
-        [data-theme="dark"] .ColumnPageHeader,
-        [data-theme="dark"] .css-1ppjin3,
-        [data-theme="dark"] .css-nbr1cj,
-        [data-theme="dark"] .css-2lvw8d,
-        [data-theme="dark"] .sgui-header {
+        html[data-theme="dark"] .AppHeader,
+        html[data-theme="dark"] header[role="banner"],
+        html[data-theme="dark"] .ColumnPageHeader,
+        html[data-theme="dark"] .css-1ppjin3,
+        html[data-theme="dark"] .css-nbr1cj,
+        html[data-theme="dark"] .css-2lvw8d,
+        html[data-theme="dark"] .sgui-header {
             background-color: var(--bg-header) !important;
             border-bottom: 1px solid var(--border-primary) !important;
         }
 
         /* 导航栏内的文字和链接 */
-        [data-theme="dark"] .Tabs-link {
+        html[data-theme="dark"] .Tabs-link {
             color: var(--text-primary) !important;
         }
-        [data-theme="dark"] .Tabs-link.is-active {
+
+        html[data-theme="dark"] .Tabs-link.is-active {
             color: var(--text-highlight) !important;
         }
 
         /* 搜索框 */
-        [data-theme="dark"] .SearchBar-input {
+        html[data-theme="dark"] .SearchBar-input {
             background-color: var(--bg-hover) !important;
             color: var(--text-primary) !important;
             border: 1px solid var(--border-primary) !important;
         }
 
         /* 移除消息、私信、创作中心按钮的边框 */
-        [data-theme="dark"] .AppHeader-notifications,
-        [data-theme="dark"] .AppHeader-messages,
-        [data-theme="dark"] .css-18vqx7l .Button {
+        html[data-theme="dark"] .AppHeader-notifications,
+        html[data-theme="dark"] .AppHeader-messages,
+        html[data-theme="dark"] .css-18vqx7l .Button {
             border: none !important;
             background-color: var(--bg-header) !important;
             color: var(--text-primary) !important;
         }
 
         /* 通用 SVG 图标颜色 */
-        [data-theme="dark"] .ZDI,
-        [data-theme="dark"] .css-133xqjo svg,
-        [data-theme="dark"] .css-3470e2 svg,
-        [data-theme="dark"] .css-wuse5b svg {
+        html[data-theme="dark"] .ZDI,
+        html[data-theme="dark"] .css-133xqjo svg,
+        html[data-theme="dark"] .css-3470e2 svg,
+        html[data-theme="dark"] .css-wuse5b svg {
             fill: var(--icon-fill) !important;
         }
 
         /* logo 调整（反色以适应暗色背景） */
-        [data-theme="dark"] .css-1hlrcxk {
+        html[data-theme="dark"] .css-1hlrcxk {
             filter: brightness(0) invert(1) !important;
         }
 
         /* 用户头像边框 */
-        [data-theme="dark"] .AppHeader-profileAvatar {
+        html[data-theme="dark"] .AppHeader-profileAvatar {
             border: 1px solid var(--border-primary) !important;
         }
 
         /* 主要标题文本 */
-        [data-theme="dark"] h1,
-        [data-theme="dark"] .ContentItem-title,
-        [data-theme="dark"] .QuestionHeader-title,
-        [data-theme="dark"] .LevelInfoV2-creatorInfo,
-        [data-theme="dark"] .css-vurnku, .css-cnnstd, .css-180vb7x, .css-1fu8ne5, .css-1yn8tbw,
-        [data-theme="dark"] .css-ac5rcx, .css-12kq1qx, .css-33pnco, .css-dpt3mb, .css-1brgq4x,
-        [data-theme="dark"] .css-1yuw5jz, .css-1jrei64, .css-1czelnl {
+        html[data-theme="dark"] h1,
+        html[data-theme="dark"] .ContentItem-title,
+        html[data-theme="dark"] .QuestionHeader-title,
+        html[data-theme="dark"] .LevelInfoV2-creatorInfo,
+        html[data-theme="dark"] .css-vurnku,
+        html[data-theme="dark"] .css-cnnstd,
+        html[data-theme="dark"] .css-180vb7x,
+        html[data-theme="dark"] .css-1fu8ne5,
+        html[data-theme="dark"] .css-1yn8tbw,
+        html[data-theme="dark"] .css-ac5rcx,
+        html[data-theme="dark"] .css-12kq1qx,
+        html[data-theme="dark"] .css-33pnco,
+        html[data-theme="dark"] .css-dpt3mb,
+        html[data-theme="dark"] .css-1brgq4x,
+        html[data-theme="dark"] .css-1yuw5jz,
+        html[data-theme="dark"] .css-1jrei64,
+        html[data-theme="dark"] .css-1czelnl {
             color: var(--text-title) !important;
         }
 
         /* 主要内容区域 (深色背景 + 浅色文字) */
-        [data-theme="dark"] .css-nomdw0, .css-i9ss08, .css-1nr5ql7, .css-157mis2, .css-7hb6gj,
-        [data-theme="dark"] .css-1mbpn2d, .css-1yjqd5z, .css-12lqyc0, .css-35pmty, .css-1t0dqk7,
-        [data-theme="dark"] .css-1cr4989, .css-1357f6, .css-1ury69a, .css-looxkda, .Sticky,
-        [data-theme="dark"] .css-xpmfhx, .css-3zr8ne, .CreationManage-CreationCard, .css-slqtjm,
-        [data-theme="dark"] .css-1rniuv1, .Tabs, .css-k5im1d, .css-986uza, .css-1w24404, .css-xoei2t,
-        [data-theme="dark"] .css-1m8gbjc, .css-1oqbvad, .css-1ta275q, .css-ndiv23, .css-1wof2n,
-        [data-theme="dark"] .css-fqja0q, .css-114mqx8, .css-1iazx5e, .css-yckfye, .css-lztgnc,
-        [data-theme="dark"] .Creator-salt-author-welfare, .Creator-salt-author-welfare-card,
-        [data-theme="dark"] .CreatorSalt-personalInfo, .css-d1sc5t, .CreatorSalt-sideBar-wrapper,
-        [data-theme="dark"] .css-19nug30, .css-h9kawn, .css-127i0sx, .WriteIndexLayout-main,
-        [data-theme="dark"] .css-wmwsyx, .ListShortcut, .css-4jezjh, .css-10kzyet, .css-1byd3cx,
-        [data-theme="darks"] .css-15k5nix, .css-15aftra, .css-kt4t4n, .css-1e7fksk, .css-70t8h2,
-        [data-theme="dark"] .css-13445jb, .css-smf7y2, .css-h07o3w, .css-7tlwbh, .css-jtt4ph,
-        [data-theme="dark"] .css-qf4x08, .css-1y416g7, .css-1p9otau, .css-qgxdhd, .css-16xfl53,
-        [data-theme="dark"] .css-89btt1, .css-3wnwue, .css-1tny33p, .css-5fegde,
-        [data-theme="dark"] table.css-our8ff, [data-theme="dark"] table.css-our8ff tr,
-        [data-theme="dark"] table.css-our8ff td, [data-theme="dark"] table.css-our8ff th,
-        [data-theme="dark"] .css-odpg9, [data-theme="dark"] .css-tl7t4z {
+        html[data-theme="dark"] .css-nomdw0,
+        html[data-theme="dark"] .css-i9ss08,
+        html[data-theme="dark"] .css-1nr5ql7,
+        html[data-theme="dark"] .css-157mis2,
+        html[data-theme="dark"] .css-7hb6gj,
+        html[data-theme="dark"] .css-1mbpn2d,
+        html[data-theme="dark"] .css-1yjqd5z,
+        html[data-theme="dark"] .css-12lqyc0,
+        html[data-theme="dark"] .css-35pmty,
+        html[data-theme="dark"] .css-1t0dqk7,
+        html[data-theme="dark"] .css-1cr4989,
+        html[data-theme="dark"] .css-1357f6,
+        html[data-theme="dark"] .css-1ury69a,
+        html[data-theme="dark"] .css-looxkda,
+        html[data-theme="dark"] .Sticky,
+        html[data-theme="dark"] .css-xpmfhx,
+        html[data-theme="dark"] .css-3zr8ne,
+        html[data-theme="dark"] .CreationManage-CreationCard,
+        html[data-theme="dark"] .css-slqtjm,
+        html[data-theme="dark"] .css-1rniuv1,
+        html[data-theme="dark"] .Tabs,
+        html[data-theme="dark"] .css-k5im1d,
+        html[data-theme="dark"] .css-986uza,
+        html[data-theme="dark"] .css-1w24404,
+        html[data-theme="dark"] .css-xoei2t,
+        html[data-theme="dark"] .css-1m8gbjc,
+        html[data-theme="dark"] .css-1oqbvad,
+        html[data-theme="dark"] .css-1ta275q,
+        html[data-theme="dark"] .css-ndiv23,
+        html[data-theme="dark"] .css-1wof2n,
+        html[data-theme="dark"] .css-fqja0q,
+        html[data-theme="dark"] .css-114mqx8,
+        html[data-theme="dark"] .css-1iazx5e,
+        html[data-theme="dark"] .css-yckfye,
+        html[data-theme="dark"] .css-lztgnc,
+        html[data-theme="dark"] .Creator-salt-author-welfare,
+        html[data-theme="dark"] .Creator-salt-author-welfare-card,
+        html[data-theme="dark"] .CreatorSalt-personalInfo,
+        html[data-theme="dark"] .css-d1sc5t,
+        html[data-theme="dark"] .CreatorSalt-sideBar-wrapper,
+        html[data-theme="dark"] .css-19nug30,
+        html[data-theme="dark"] .css-h9kawn,
+        html[data-theme="dark"] .css-127i0sx,
+        html[data-theme="dark"] .WriteIndexLayout-main,
+        html[data-theme="dark"] .css-wmwsyx,
+        html[data-theme="dark"] .ListShortcut,
+        html[data-theme="dark"] .css-4jezjh,
+        html[data-theme="dark"] .css-10kzyet,
+        html[data-theme="dark"] .css-1byd3cx,
+        html[data-theme="dark"] .css-15k5nix,
+        html[data-theme="dark"] .css-15aftra,
+        html[data-theme="dark"] .css-kt4t4n,
+        html[data-theme="dark"] .css-1e7fksk,
+        html[data-theme="dark"] .css-70t8h2,
+        html[data-theme="dark"] .css-13445jb,
+        html[data-theme="dark"] .css-smf7y2,
+        html[data-theme="dark"] .css-h07o3w,
+        html[data-theme="dark"] .css-7tlwbh,
+        html[data-theme="dark"] .css-jtt4ph,
+        html[data-theme="dark"] .css-qf4x08,
+        html[data-theme="dark"] .css-1y416g7,
+        html[data-theme="dark"] .css-1p9otau,
+        html[data-theme="dark"] .css-qgxdhd,
+        html[data-theme="dark"] .css-16xfl53,
+        html[data-theme="dark"] .css-89btt1,
+        html[data-theme="dark"] .css-3wnwue,
+        html[data-theme="dark"] .css-1tny33p,
+        html[data-theme="dark"] .css-5fegde,
+        html[data-theme="dark"] table.css-our8ff,
+        html[data-theme="dark"] table.css-our8ff tr,
+        html[data-theme="dark"] table.css-our8ff td,
+        html[data-theme="dark"] table.css-our8ff th,
+        html[data-theme="dark"] .css-odpg9,
+        html[data-theme="dark"] .css-tl7t4z {
             background-color: var(--bg-primary) !important;
             color: var(--text-primary) !important;
         }
 
         /* 次要内容区域 (稍亮的背景) */
-        [data-theme="dark"] .css-1so3nbl, .WriteIndex-titleInput, .EditorSnapshotWrapper,
-        [data-theme="dark"] .css-13mrzb0, .css-qhzfje {
+        html[data-theme="dark"] .css-1so3nbl,
+        html[data-theme="dark"] .WriteIndex-titleInput,
+        html[data-theme="dark"] .EditorSnapshotWrapper,
+        html[data-theme="dark"] .css-13mrzb0,
+        html[data-theme="dark"] .css-qhzfje {
             background-color: var(--bg-secondary) !important;
         }
 
         /* 主要文本颜色 (无背景修改) */
-        [data-theme="dark"] .css-sgbbgb, .Creator-QuestionShared-title, .css-1o7uqnr,
-        [data-theme="dark"] .css-atxtl4, .css-qlj5ur, .css-1kq86bv, .css-z06s02, .css-1xvfl67,
-        [data-theme="dark"] .css-1yijwry, .css-1rspjpf, .css-15box0, .css-urncze, .css-1k65ame,
-        [data-theme="dark"] .css-g62hty, .css-rg9c67, .css-1oq372o, .css-141xy67, .css-vm9s9s,
-        [data-theme="dark"] .css-68ooft, .css-1t3in1, .ToolsCopyright-FieldName,
-        [data-theme="dark"] .Create-salt-author-complaint-page-content h2, .css-bjox9u,
-        [data-theme="dark"] .css-1w0nc6z, .css-1k10w8f, .css-10u695f, .CommentContent,
-        [data-theme="dark"] .css-19m36yt, .css-1yj4uzm, .css-1pmadmj, .css-rv8vcy,
-        [data-theme="dark"] .css-1tvhjhb, .css-f3930v, .css-13awyku, .css-1f4cz9u,
-        [data-theme="dark"] .css-r4op92, .css-1ptti3p, .css-m9wflr, .css-9rfw7f,
-        [data-theme="dark"] .AuthorInfo-name, .css-1ggwcl9, .css-4uviby, .css-lmmx7rh,
-        [data-theme="dark"] .css-1iz9tag, .css-roes5o, .css-1qqcn7d, .css-yn7rjo, .css-me2vqk,
-        [data-theme="dark"] .css-e0p248, .css-iotqsc, .css-onu91o,
-        [data-theme="dark"] .Create-salt-author-complaint-page-content p, .css-h5rdys,
-        [data-theme="dark"] .css-1symrae, .css-705zp9, .css-l2s8o9, .App-pc, .css-1eqmq6,
-        [data-theme="dark"] .css-133xqjo, .css-17rhbf0, .css-3470e2, .css-wuse5b {
+        html[data-theme="dark"] .css-sgbbgb,
+        html[data-theme="dark"] .Creator-QuestionShared-title,
+        html[data-theme="dark"] .css-1o7uqnr,
+        html[data-theme="dark"] .css-atxtl4,
+        html[data-theme="dark"] .css-qlj5ur,
+        html[data-theme="dark"] .css-1kq86bv,
+        html[data-theme="dark"] .css-z06s02,
+        html[data-theme="dark"] .css-1xvfl67,
+        html[data-theme="dark"] .css-1yijwry,
+        html[data-theme="dark"] .css-1rspjpf,
+        html[data-theme="dark"] .css-15box0,
+        html[data-theme="dark"] .css-urncze,
+        html[data-theme="dark"] .css-1k65ame,
+        html[data-theme="dark"] .css-g62hty,
+        html[data-theme="dark"] .css-rg9c67,
+        html[data-theme="dark"] .css-1oq372o,
+        html[data-theme="dark"] .css-141xy67,
+        html[data-theme="dark"] .css-vm9s9s,
+        html[data-theme="dark"] .css-68ooft,
+        html[data-theme="dark"] .css-1t3in1,
+        html[data-theme="dark"] .ToolsCopyright-FieldName,
+        html[data-theme="dark"] .Create-salt-author-complaint-page-content h2,
+        html[data-theme="dark"] .css-bjox9u,
+        html[data-theme="dark"] .css-1w0nc6z,
+        html[data-theme="dark"] .css-1k10w8f,
+        html[data-theme="dark"] .css-10u695f,
+        html[data-theme="dark"] .CommentContent,
+        html[data-theme="dark"] .css-19m36yt,
+        html[data-theme="dark"] .css-1yj4uzm,
+        html[data-theme="dark"] .css-1pmadmj,
+        html[data-theme="dark"] .css-rv8vcy,
+        html[data-theme="dark"] .css-1tvhjhb,
+        html[data-theme="dark"] .css-f3930v,
+        html[data-theme="dark"] .css-13awyku,
+        html[data-theme="dark"] .css-1f4cz9u,
+        html[data-theme="dark"] .css-r4op92,
+        html[data-theme="dark"] .css-1ptti3p,
+        html[data-theme="dark"] .css-m9wflr,
+        html[data-theme="dark"] .css-9rfw7f,
+        html[data-theme="dark"] .AuthorInfo-name,
+        html[data-theme="dark"] .css-1ggwcl9,
+        html[data-theme="dark"] .css-4uviby,
+        html[data-theme="dark"] .css-lmmx7rh,
+        html[data-theme="dark"] .css-1iz9tag,
+        html[data-theme="dark"] .css-roes5o,
+        html[data-theme="dark"] .css-1qqcn7d,
+        html[data-theme="dark"] .css-yn7rjo,
+        html[data-theme="dark"] .css-me2vqk,
+        html[data-theme="dark"] .css-e0p248,
+        html[data-theme="dark"] .css-iotqsc,
+        html[data-theme="dark"] .css-onu91o,
+        html[data-theme="dark"] .Create-salt-author-complaint-page-content p,
+        html[data-theme="dark"] .css-h5rdys,
+        html[data-theme="dark"] .css-1symrae,
+        html[data-theme="dark"] .css-705zp9,
+        html[data-theme="dark"] .css-l2s8o9,
+        html[data-theme="dark"] .App-pc,
+        html[data-theme="dark"] .css-1eqmq6,
+        html[data-theme="dark"] .css-133xqjo,
+        html[data-theme="dark"] .css-17rhbf0,
+        html[data-theme="dark"] .css-3470e2,
+        html[data-theme="dark"] .css-wuse5b {
             color: var(--text-primary) !important;
         }
 
         /* 副文/注释文本 */
-        [data-theme="dark"] .css-1dydzuy,
-        [data-theme="dark"] .AuthorInfo-badgeText {
+        html[data-theme="dark"] .css-1dydzuy,
+        html[data-theme="dark"] .AuthorInfo-badgeText {
             color: var(--text-secondary) !important;
         }
 
         /* 高亮/突出文本 */
-        [data-theme="dark"] .css-anmzua, .css-1woiwqg, .MCNQuestionListItem-answerBtn,
-        [data-theme="dark"] .css-66w2mh, .css-oxh2a1, .css-1946lac, .css-1wp1nud,
-        [data-theme="dark"] .css-zkfaav, .css-qlzdd2, .css-14w1mp, .css-2kp40o,
-        [data-theme="dark"] .css-risksa, .css-6j0ktf {
+        html[data-theme="dark"] .css-anmzua,
+        html[data-theme="dark"] .css-1woiwqg,
+        html[data-theme="dark"] .MCNQuestionListItem-answerBtn,
+        html[data-theme="dark"] .css-66w2mh,
+        html[data-theme="dark"] .css-oxh2a1,
+        html[data-theme="dark"] .css-1946lac,
+        html[data-theme="dark"] .css-1wp1nud,
+        html[data-theme="dark"] .css-zkfaav,
+        html[data-theme="dark"] .css-qlzdd2,
+        html[data-theme="dark"] .css-14w1mp,
+        html[data-theme="dark"] .css-2kp40o,
+        html[data-theme="dark"] .css-risksa,
+        html[data-theme="dark"] .css-6j0ktf {
             color: var(--text-highlight) !important;
         }
 
         /* 超链接文本 */
-        [data-theme="dark"] .css-b7erz1,
-        [data-theme="dark"] .css-140fcia {
+        html[data-theme="dark"] .css-b7erz1,
+        html[data-theme="dark"] .css-140fcia {
             color: var(--text-link) !important;
         }
 
         /* 纯黑背景 */
-        [data-theme="dark"] .css-2sopzd {
+        html[data-theme="dark"] .css-2sopzd {
             background-color: var(--bg-pure-black) !important;
         }
 
         /* 代码区 */
-        [data-theme="dark"] code,
-        [data-theme="dark"] .css-ob6uua pre,
-        [data-theme="dark"] .css-1mev9j9 pre,
-        [data-theme="dark"] .css-1yl6ec1 pre,
-        [data-theme="dark"] .css-oqi8p3 pre{
+        html[data-theme="dark"] code,
+        html[data-theme="dark"] .css-ob6uua pre,
+        html[data-theme="dark"] .css-1mev9j9 pre,
+        html[data-theme="dark"] .css-1yl6ec1 pre,
+        html[data-theme="dark"] .css-oqi8p3 pre {
             background: var(--bg-code) !important;
         }
 
         /* 卡片样式 (LinkCard) */
-        [data-theme="dark"] .LinkCard {
+        html[data-theme="dark"] .LinkCard {
             background-color: var(--bg-card) !important;
             border: 1px solid var(--border-secondary) !important;
             border-radius: 8px !important;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2) !important;
         }
-        [data-theme="dark"] .LinkCard.new.css-1vqsdx1 {
+
+        html[data-theme="dark"] .LinkCard.new.css-1vqsdx1 {
             background-color: transparent !important;
             color: var(--text-title) !important;
         }
-        [data-theme="dark"] .LinkCard.new.css-1vqsdx1:hover {
+
+        html[data-theme="dark"] .LinkCard.new.css-1vqsdx1:hover {
             background-color: var(--bg-hover) !important;
             transition: background-color 0.3s ease !important;
         }
-        [data-theme="dark"] .LinkCard-contents { background-color: transparent !important; }
-        [data-theme="dark"] .LinkCard-title { color: var(--text-title) !important; font-weight: 600 !important; }
-        [data-theme="dark"] .LinkCard-desc { color: var(--text-primary) !important; }
-        [data-theme="dark"] .LinkCard-tag {
+
+        html[data-theme="dark"] .LinkCard-contents { background-color: transparent !important; }
+
+        html[data-theme="dark"] .LinkCard-title { color: var(--text-title) !important; font-weight: 600 !important; }
+
+        html[data-theme="dark"] .LinkCard-desc { color: var(--text-primary) !important; }
+
+        html[data-theme="dark"] .LinkCard-tag {
             background-color: var(--bg-tag) !important;
             color: var(--text-title) !important;
         }
-        [data-theme="dark"] .LinkCard-image {
+
+        html[data-theme="dark"] .LinkCard-image {
             background-color: var(--bg-primary) !important;
             border: 1px solid var(--border-secondary) !important;
         }
-        [data-theme="dark"] .LinkCard-image img { opacity: 0.9 !important; transition: opacity 0.3s ease !important; }
-        [data-theme="dark"] .LinkCard-image img:hover { opacity: 1 !important; }
-        [data-theme="dark"] .LinkCard-image--video .Zi.Zi--Play { color: var(--text-highlight) !important; }
+
+        html[data-theme="dark"] .LinkCard-image img { opacity: 0.9 !important; transition: opacity 0.3s ease !important; }
+
+        html[data-theme="dark"] .LinkCard-image img:hover { opacity: 1 !important; }
+
+        html[data-theme="dark"] .LinkCard-image--video .Zi.Zi--Play { color: var(--text-highlight) !important; }
 
         /* 导航菜单悬浮效果 */
-        [data-theme="dark"] .css-17rhbf0:hover {
+        html[data-theme="dark"] .css-17rhbf0:hover {
             background-color: var(--bg-hover) !important;
             color: var(--text-highlight) !important;
         }
 
         /* 特殊图标 */
-        [data-theme="dark"] .css-1bh8qzv path:first-child { fill: #d32f2f !important; }
-        [data-theme="dark"] .css-1bh8qzv path:last-child { fill: var(--text-highlight) !important; }
+        html[data-theme="dark"] .css-1bh8qzv path:first-child { fill: #d32f2f !important; }
+
+        html[data-theme="dark"] .css-1bh8qzv path:last-child { fill: var(--text-highlight) !important; }
 
         /* “稍后答”等按钮的悬浮效果 */
-        [data-theme="dark"] .css-3470e2:hover,
-        [data-theme="dark"] .css-wuse5b:hover {
+        html[data-theme="dark"] .css-3470e2:hover,
+        html[data-theme="dark"] .css-wuse5b:hover {
             color: var(--text-highlight) !important;
             background-color: var(--bg-hover) !important;
         }
-        [data-theme="dark"] .css-3470e2:hover svg,
-        [data-theme="dark"] .css-wuse5b:hover svg {
+
+        html[data-theme="dark"] .css-3470e2:hover svg,
+        html[data-theme="dark"] .css-wuse5b:hover svg {
             fill: var(--text-highlight) !important;
         }
 
         /* 通用按钮 */
-        [data-theme="dark"] .css-hdz1a3,
-        [data-theme="dark"] .css-1q65fkr,
-        [data-theme="dark"] .css-97fdvh {
+        html[data-theme="dark"] .css-hdz1a3,
+        html[data-theme="dark"] .css-1q65fkr,
+        html[data-theme="dark"] .css-97fdvh {
             color: var(--text-primary) !important;
             background-color: var(--bg-button) !important;
             border: 1px solid var(--border-primary) !important;
         }
-        [data-theme="dark"] .css-hdz1a3:hover {
+
+        html[data-theme="dark"] .css-hdz1a3:hover {
             color: var(--text-highlight) !important;
             background-color: var(--bg-hover) !important;
             border-color: var(--border-hover) !important;
         }
 
         /* 滚动条 */
-        [data-theme="dark"] .StrollBar { background-color: transparent !important; }
-        [data-theme="dark"] .StrollBar > div { background-color: rgba(255, 255, 255, 0.3) !important; }
+        html[data-theme="dark"] .StrollBar { background-color: transparent !important; }
+
+        html[data-theme="dark"] .StrollBar > div { background-color: rgba(255, 255, 255, 0.3) !important; }
     `;
 
-    // 立即将样式添加到页面，即使DOM还未完全加载
-    document.head ? document.head.appendChild(style) : document.documentElement.appendChild(style);
+    // 使用 MutationObserver 监控 data-theme 变化，防止知乎自身脚本覆盖主题
+    const themeObserver = new MutationObserver(applyTheme);
+    const initializeTheme = () => {
+        if (!document.documentElement) return false;
+        // 开始观察 <html> 的属性变化
+        themeObserver.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ['data-theme']
+        });
+        // 在页面解析之前设置初始主题，避免白屏
+        applyTheme();
+        // 立即将样式添加到页面，即使DOM还未完全加载
+        (document.head || document.documentElement).appendChild(style);
+        return true;
+    };
 
-    // 页面加载完成后执行后续逻辑
-    window.addEventListener('DOMContentLoaded', () => {
-        // 设置主题函数
-        const setTheme = (theme) => {
-            document.documentElement.setAttribute('data-theme', theme);
-        };
+    // 提前初始化，修复载入时主题被覆盖的问题。
+    if (!initializeTheme()) {
+        // 等待 <html> 创建后初始化。
+        const rootObserver = new MutationObserver(() => {
+            if (initializeTheme()) rootObserver.disconnect();
+        });
+        rootObserver.observe(document, { childList: true });
+    }
+
+    const initializeButton = () => {
+        applyTheme();
+        if (!document.body || document.getElementById(BUTTON_ID)) return;
 
         // 创建切换按钮
         const toggleBtn = document.createElement('button');
+        toggleBtn.id = BUTTON_ID;
+        toggleBtn.type = 'button';
         toggleBtn.style.position = 'fixed';
         toggleBtn.style.top = '10px';
         toggleBtn.style.right = '10px';
@@ -297,7 +478,6 @@
         toggleBtn.style.width = '32px';
         toggleBtn.style.height = '32px';
         toggleBtn.style.padding = '0';
-        toggleBtn.style.backgroundColor = isDark ? '#333333' : '#ffffff';
         toggleBtn.style.border = '1px solid #404040';
         toggleBtn.style.borderRadius = '50%';
         toggleBtn.style.cursor = 'pointer';
@@ -305,7 +485,6 @@
         toggleBtn.style.alignItems = 'center';
         toggleBtn.style.justifyContent = 'center';
         toggleBtn.style.boxShadow = '0 2px 4px rgba(0,0,0,0.2)';
-        toggleBtn.title = isDark ? '切换到浅色模式' : '切换到深色模式';
 
         // SVG 图标（太阳和月亮）
         const sunIcon = `
@@ -328,49 +507,39 @@
             </svg>
         `;
 
+        const updateButton = () => {
+            toggleBtn.innerHTML = isDark ? sunIcon : moonIcon;
+            toggleBtn.style.backgroundColor = isDark ? '#333333' : '#ffffff';
+            toggleBtn.title = isDark ? '切换到浅色模式' : '切换到深色模式';
+            toggleBtn.setAttribute('aria-label', toggleBtn.title);
+            toggleBtn.setAttribute('aria-pressed', String(isDark));
+        };
         // 设置初始图标
-        toggleBtn.innerHTML = isDark ? sunIcon : moonIcon;
+        updateButton();
 
         // 点击切换主题
         toggleBtn.onclick = () => {
-            const currentTheme = document.documentElement.getAttribute('data-theme');
-            if (currentTheme === 'dark') {
-                setTheme('light');
-                toggleBtn.innerHTML = moonIcon;
-                toggleBtn.style.backgroundColor = '#ffffff';
-                toggleBtn.title = '切换到深色模式';
-                localStorage.setItem('zhihu-dark-mode', 'false');
-            } else {
-                setTheme('dark');
-                toggleBtn.innerHTML = sunIcon;
-                toggleBtn.style.backgroundColor = '#333333';
-                toggleBtn.title = '切换到浅色模式';
-                localStorage.setItem('zhihu-dark-mode', 'true');
+            const nextPreference = !isDark;
+            try {
+                // 储存成功后更新主题和按钮。
+                localStorage.setItem(STORAGE_KEY, String(nextPreference));
+                isDark = nextPreference;
+                applyTheme();
+                updateButton();
+            } catch (error) {
+                toggleBtn.title = '主题设定储存失败，请检查网站储存权限';
+                console.error('[Zhihu Dark Mode] 储存设定失败', error);
             }
         };
 
         // 添加按钮到页面
         document.body.appendChild(toggleBtn);
+    };
 
-        // 使用 MutationObserver 监控 data-theme 变化，防止知乎自身脚本覆盖主题
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'data-theme') {
-                    const currentTheme = document.documentElement.getAttribute('data-theme');
-                    const shouldBeDark = localStorage.getItem('zhihu-dark-mode') === 'true';
-                    if (shouldBeDark && currentTheme !== 'dark') {
-                        setTheme('dark');
-                    } else if (!shouldBeDark && currentTheme !== 'light') {
-                        setTheme('light');
-                    }
-                }
-            });
-        });
-
-        // 开始观察 <html> 的属性变化
-        observer.observe(document.documentElement, {
-            attributes: true,
-            attributeFilter: ['data-theme']
-        });
-    });
+    // 页面加载完成后执行后续逻辑
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initializeButton, { once: true });
+    } else {
+        initializeButton();
+    }
 })();
